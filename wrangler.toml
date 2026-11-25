@@ -1,0 +1,19 @@
+name = "frosty-hall-b193"
+main = "src/index.js"
+compatibility_date = "2026-11-25"
+preview_urls = true
+
+[observability]
+enabled = false
+
+[observability.logs]
+enabled = false
+
+[vars]
+ALLOWED_ORIGINS = "*"
+GEMINI_MODEL = "gemini-3.1-flash-lite"
+
+[[ratelimits]]
+name = "CHAT_LIMIT"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
