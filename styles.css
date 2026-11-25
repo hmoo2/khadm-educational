@@ -12,6 +12,7 @@
   background: var(--bg);
   color: var(--text);
 }
+html.account-session-check body { visibility: hidden; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -34,13 +35,16 @@ button, select { font: inherit; }
 .app-shell { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: 100vh; background: var(--bg); }
 .sidebar { position: sticky; top: 0; height: 100vh; padding: 20px 14px; background: var(--sidebar); border-left: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 10px; margin: 4px 6px 18px; }
-.brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; background: var(--teal); color: #fff; font-size: 1.35rem; }
+.brand-mark { width: 42px; height: 42px; display: block; flex: 0 0 42px; border: 1px solid rgba(13, 113, 128, .18); border-radius: 12px; background: var(--teal); object-fit: cover; }
+.mobile-brand-logo { display: none; }
 .brand strong, .brand span { display: block; }
 .brand span { margin-top: 3px; color: var(--muted); font-size: .78rem; }
 .new-chat { width: 100%; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
 .chat-list { display: grid; gap: 6px; margin-top: 14px; max-height: calc(100vh - 180px); overflow-y: auto; }
 .chat-list button { width: 100%; min-height: 42px; padding: 8px 10px; border: 0; background: transparent; color: var(--text); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-list button.active { background: var(--teal-soft); border-radius: 10px; }
+.account-entry { display: block; padding: 11px 12px; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); text-align: center; text-decoration: none; }
+.account-entry:hover { border-color: var(--teal); color: var(--teal); }
 .theme-toggle { position: absolute; bottom: 16px; right: 14px; left: 14px; width: calc(100% - 28px); background: transparent; border: 1px solid var(--line); color: var(--text); }
 .main-panel { width: min(920px, calc(100% - 40px)); margin: 0 auto; padding: 32px 0 40px; }
 .chat-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
@@ -165,6 +169,7 @@ button:disabled { cursor: wait; opacity: .65; }
   background: var(--bg);
 }
 .chat-message { max-width: 88%; padding: 10px 13px; border-radius: 12px; line-height: 1.75; white-space: pre-wrap; }
+.chat-message img { display: block; max-width: 100%; max-height: 320px; margin-top: 10px; border-radius: 10px; object-fit: contain; }
 .chat-message.assistant { justify-self: start; background: var(--teal-soft); }
 .chat-message.user { justify-self: end; background: var(--teal); color: #fff; }
 .chat-message.error { justify-self: start; background: #fff0f0; color: #782121; }
@@ -240,6 +245,8 @@ button:disabled { cursor: wait; opacity: .65; }
   .chat-header { align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 10px; }
   .sidebar-toggle { flex: 0 0 44px; display: grid; place-items: center; width: 44px; min-height: 44px; padding: 0; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: 1.15rem; }
   .page-heading { flex: 1; min-width: 0; }
+  .page-heading { position: relative; padding-inline-start: 48px; }
+  .mobile-brand-logo { position: absolute; inset-inline-start: 0; top: 50%; display: block; width: 40px; height: 40px; border-radius: 10px; object-fit: cover; transform: translateY(-50%); }
   .chat-header h1 { font-size: clamp(1.2rem, 4.5vw, 1.65rem); line-height: 1.4; }
   .subject-picker { width: 100%; justify-content: space-between; }
   .subject-picker select { flex: 1; min-width: 0; }

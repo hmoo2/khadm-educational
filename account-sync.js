@@ -1,98 +1,97 @@
 (() => {
   const supabase = window.schoolSupabase;
-  const SESSION_USER_KEY = "khadmActiveStudentId";
-  const RELOAD_GUARD_KEY = "khadmAccountScopeReload";
-  const CONVERSATION_IMPORT_KEY = "khadmConversationImportUser";
+  const WORKER_URL = "https://frosty-hall-b193.hmoobaha8.workers.dev";
   const pendingExamSaves = new Map();
+  let resolveAccountReady;
+  window.accountUserId = null;
+  window.accountChatSessions = [];
+  window.accountActiveExam = null;
+  window.accountSyncError = null;
+  window.accountSessionReady = new Promise((resolve) => {
+    resolveAccountReady = resolve;
+  });
   document.documentElement.classList.add("account-session-check");
 
-  function applyUserScope(userId) {
-    const previousId = localStorage.getItem(SESSION_USER_KEY);
-    if (previousId === userId) {
-      sessionStorage.removeItem(RELOAD_GUARD_KEY);
+  async function getAuthHeaders() {
+    if (!supabase) return {};
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return data.session?.user?.email_confirmed_at
+      ? { Authorization: `Bearer ${data.session.access_token}` }
+      : {};
+  }
+
+  async function loadAccountData(session) {
+    const user = session?.user;
+    if (!user?.email_confirmed_at) return;
+    window.accountUserId = user.id;
+    const [conversationsResult, examsResponse] = await Promise.all([
+      supabase.from("student_conversations")
+        .select("id,title,subject,messages,updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(50),
+      fetch(`${WORKER_URL}/api/account/exams`, {
+        headers: { Accept: "application/json", Authorization: `Bearer ${session.access_token}` },
+      }).then(async (response) => {
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error || `تعذر تحميل سجل الامتحانات (${response.status}).`);
+        return body;
+      }),
+    ]);
+    if (conversationsResult.error) throw conversationsResult.error;
+    window.accountChatSessions = (conversationsResult.data || []).map((conversation) => ({
+      id: conversation.id,
+      title: conversation.title,
+      mode: conversation.subject,
+      messages: Array.isArray(conversation.messages) ? conversation.messages : [],
+    }));
+    const active = examsResponse.attempts?.find((attempt) => attempt.status === "in_progress");
+    if (active?.exam && active.id) {
+      window.accountActiveExam = {
+        attemptId: active.id,
+        mode: active.subject,
+        exam: active.exam,
+        answers: active.answers || {},
+        expiresAt: new Date(active.expires_at).getTime(),
+        status: "in_progress",
+        result: null,
+        images: {},
+        missingImageIds: [],
+      };
+    }
+  }
+
+  async function initialize() {
+    if (!supabase) return false;
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    if (!data.session?.user?.email_confirmed_at) {
+      if (data.session) {
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) throw signOutError;
+      }
       return false;
     }
-
-    if (userId) localStorage.setItem(SESSION_USER_KEY, userId);
-    else localStorage.removeItem(SESSION_USER_KEY);
-    if (!sessionStorage.getItem(RELOAD_GUARD_KEY)) {
-      sessionStorage.setItem(RELOAD_GUARD_KEY, "1");
-      window.location.reload();
-      return true;
-    }
-    sessionStorage.removeItem(RELOAD_GUARD_KEY);
-    document.documentElement.classList.remove("account-session-check");
-    return false;
-  }
-
-  if (!supabase) {
-    document.documentElement.classList.remove("account-session-check");
-    return;
-  }
-
-  async function importSavedConversations(userId) {
-    const { data, error } = await supabase.from("student_conversations")
-      .select("id,title,subject,messages,updated_at")
-      .eq("user_id", userId)
-      .order("updated_at", { ascending: false })
-      .limit(50);
-    if (error) throw error;
-    const storageKey = `aiChatSessions:${userId}`;
-    const current = JSON.parse(localStorage.getItem(storageKey) || "[]");
-    const byId = new Map(current.map((session) => [session.id, session]));
-    let changed = false;
-    for (const saved of data) {
-      if (byId.has(saved.id)) continue;
-      byId.set(saved.id, {
-        id: saved.id,
-        title: saved.title,
-        mode: saved.subject,
-        messages: Array.isArray(saved.messages) ? saved.messages : [],
-      });
-      changed = true;
-    }
-    if (changed) localStorage.setItem(storageKey, JSON.stringify([...byId.values()]));
-    return changed;
-  }
-
-  supabase.auth.getSession().then(async ({ data, error }) => {
-    if (error) console.error("تعذر التحقق من جلسة الحساب:", error.message);
-    const userId = data?.session?.user?.email_confirmed_at ? data.session.user.id : null;
-    if (applyUserScope(userId)) return;
-    if (!userId) {
-      document.documentElement.classList.remove("account-session-check");
-      return;
-    }
     try {
-      const changed = await importSavedConversations(userId);
-      if (changed && sessionStorage.getItem(CONVERSATION_IMPORT_KEY) !== userId) {
-        sessionStorage.setItem(CONVERSATION_IMPORT_KEY, userId);
-        window.location.reload();
-        return;
-      }
-      if (!changed) sessionStorage.removeItem(CONVERSATION_IMPORT_KEY);
-      document.documentElement.classList.remove("account-session-check");
-    } catch (syncError) {
-      console.error("تعذر تحميل سجل محادثات الحساب:", syncError);
-      document.documentElement.classList.remove("account-session-check");
+      await loadAccountData(data.session);
+    } catch (loadError) {
+      window.accountSyncError = loadError;
+      console.error("تعذر تحميل بيانات الحساب:", loadError);
     }
-  }).catch((error) => {
-    console.error("تعذر التحقق من جلسة الحساب:", error);
-    document.documentElement.classList.remove("account-session-check");
-  });
-
-  supabase.auth.onAuthStateChange((_event, session) => {
-    const userId = session?.user?.email_confirmed_at ? session.user.id : null;
-    if (localStorage.getItem(SESSION_USER_KEY) !== userId) applyUserScope(userId);
-  });
+    supabase.auth.onAuthStateChange((_event, session) => {
+      const nextUserId = session?.user?.email_confirmed_at ? session.user.id : null;
+      if (nextUserId !== window.accountUserId) window.location.reload();
+    });
+    return true;
+  }
 
   window.studentAccount = {
     async persistConversation(conversation) {
       const { data, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       const session = data.session;
-      if (!session || !conversation?.id || !Array.isArray(conversation.messages)) return;
-      const messages = conversation.messages.map((message) => ({
+      if (!session?.user?.email_confirmed_at || !conversation?.id || !Array.isArray(conversation.messages)) return;
+      const messages = conversation.messages.slice(-200).map((message) => ({
         role: message.role,
         content: typeof message.content === "string" ? message.content : "",
         imagePath: typeof message.imagePath === "string" ? message.imagePath : null,
@@ -108,16 +107,12 @@
       }, { onConflict: "id" });
       if (error) throw error;
     },
-    async getAuthHeaders() {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) throw error;
-      return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
-    },
+    getAuthHeaders,
     async persistExam(attempt) {
       if (!attempt?.attemptId || !attempt.answers || !["in_progress", "expired"].includes(attempt.status)) return;
       const { data, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
-      if (!data.session) return;
+      if (!data.session?.user?.email_confirmed_at) return;
       let pending = pendingExamSaves.get(attempt.attemptId);
       if (!pending) {
         pending = { attempt, waiters: [], timer: null };
@@ -131,17 +126,19 @@
         if (!current) return;
         pendingExamSaves.delete(attempt.attemptId);
         try {
-          const response = await fetch("https://frosty-hall-b193.hmoobaha8.workers.dev/api/exams/save", {
+          const response = await fetch(`${WORKER_URL}/api/exams/save`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` },
             body: JSON.stringify({ attemptId: current.attempt.attemptId, answers: current.attempt.answers }),
+            keepalive: true,
           });
           const result = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(result.error || `تعذر حفظ إجابات الامتحان (${response.status}).`);
           current.waiters.forEach((waiter) => waiter.resolve());
         } catch (error) {
           current.waiters.slice(0, -1).forEach((waiter) => waiter.resolve());
-          current.waiters.at(-1)?.reject(error);
+          const lastWaiter = current.waiters[current.waiters.length - 1];
+          if (lastWaiter) lastWaiter.reject(error);
         }
       }, 450);
       return promise;
@@ -153,7 +150,7 @@
       }
       const { data, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
-      if (!data.session) return null;
+      if (!data.session?.user?.email_confirmed_at) return null;
       const binary = atob(base64Data);
       const bytes = new Uint8Array(binary.length);
       for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
@@ -168,5 +165,29 @@
       if (error) throw error;
       return { path, fileName: typeof fileName === "string" ? fileName.slice(0, 160) : "" };
     },
+    async signedImageUrl(path) {
+      if (typeof path !== "string" || !path.startsWith(`${window.accountUserId}/`)) {
+        throw new Error("مسار الصورة لا يخص الحساب الحالي.");
+      }
+      const { data, error } = await supabase.storage.from("student-media").createSignedUrl(path, 3600);
+      if (error) throw error;
+      return data.signedUrl;
+    },
   };
+
+  initialize()
+    .then((authenticated) => {
+      resolveAccountReady(authenticated);
+      if (!authenticated) {
+        window.location.replace("account.html?view=login");
+        return;
+      }
+      document.documentElement.classList.remove("account-session-check");
+    })
+    .catch((error) => {
+      window.accountSyncError = error;
+      console.error("تعذر تهيئة بيانات الحساب:", error);
+      resolveAccountReady(false);
+      window.location.replace("account.html?view=login");
+    });
 })();

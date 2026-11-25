@@ -2,6 +2,7 @@
   const supabase = window.schoolSupabase;
   const WORKER_URL = "https://frosty-hall-b193.hmoobaha8.workers.dev";
   const alertBox = document.querySelector("#account-alert");
+  const loadingBox = document.querySelector("#account-loading");
   const authView = document.querySelector("#auth-view");
   const profileView = document.querySelector("#profile-view");
   const forms = {
@@ -14,12 +15,13 @@
   const accountUrl = (view) => `${window.location.pathname}?view=${encodeURIComponent(view)}`;
 
   function showMessage(message, type = "info") {
+    loadingBox.hidden = true;
     alertBox.textContent = message;
     alertBox.dataset.type = type;
     alertBox.hidden = false;
   }
 
-  function renderConversationHistory(conversations, userId) {
+  function renderConversationHistory(conversations) {
     const container = document.querySelector("#conversation-history");
     container.replaceChildren();
     if (!conversations.length) {
@@ -41,20 +43,7 @@
       open.type = "button";
       open.textContent = "فتح المحادثة";
       open.addEventListener("click", () => {
-        const key = `aiChatSessions:${userId}`;
-        const sessions = JSON.parse(localStorage.getItem(key) || "[]");
-        const existing = sessions.findIndex((entry) => entry.id === conversation.id);
-        const saved = {
-          id: conversation.id,
-          title: conversation.title,
-          mode: conversation.subject,
-          messages: Array.isArray(conversation.messages) ? conversation.messages : [],
-        };
-        if (existing >= 0) sessions[existing] = saved;
-        else sessions.unshift(saved);
-        localStorage.setItem(key, JSON.stringify(sessions));
-        localStorage.setItem(`activeChatId:${userId}`, conversation.id);
-        window.location.href = "index.html";
+        window.location.href = `index.html?chat=${encodeURIComponent(conversation.id)}`;
       });
       item.append(title, meta, open);
       container.append(item);
@@ -67,6 +56,7 @@
   }
 
   function showAuth(view) {
+    loadingBox.hidden = true;
     authView.hidden = false;
     profileView.hidden = true;
     for (const [name, form] of Object.entries(forms)) form.hidden = name !== view;
@@ -156,6 +146,9 @@
   }
 
   async function loadDashboard() {
+    authView.hidden = true;
+    profileView.hidden = true;
+    loadingBox.hidden = false;
     const session = await getSessionOrThrow();
     const { data: userData, error: userErrorResult } = await supabase.auth.getUser();
     if (userErrorResult) throw userErrorResult;
@@ -166,19 +159,17 @@
       document.querySelector("#verify-message").textContent = "أكد بريدك الإلكتروني من الرابط المرسل قبل استخدام الحساب.";
       return;
     }
-    localStorage.setItem("khadmActiveStudentId", user.id);
-
     const [profileResult, conversationsResult, examsResult] = await Promise.all([
       supabase.from("student_profiles").select("*").eq("user_id", user.id).single(),
       supabase.from("student_conversations").select("id,title,subject,messages,created_at,updated_at").order("updated_at", { ascending: false }).limit(50),
-      supabase.from("student_exam_attempts").select("id,subject,title,result,status,started_at,completed_at").order("started_at", { ascending: false }).limit(50),
+      workerRequest("/api/account/exams"),
     ]);
     if (profileResult.error) throw profileResult.error;
     if (conversationsResult.error) throw conversationsResult.error;
-    if (examsResult.error) throw examsResult.error;
 
     authView.hidden = true;
     profileView.hidden = false;
+    loadingBox.hidden = true;
     document.querySelector("#welcome-heading").textContent = `مرحبًا، ${profileResult.data.full_name}`;
     document.querySelector("#profile-form [name='full_name']").value = profileResult.data.full_name;
     document.querySelector("#profile-form [name='email']").value = user.email || "";
@@ -204,7 +195,7 @@
     }
 
     const conversations = conversationsResult.data || [];
-    const attempts = examsResult.data || [];
+    const attempts = Array.isArray(examsResult.attempts) ? examsResult.attempts : [];
     const completed = attempts.filter((attempt) => attempt.status === "completed" && attempt.result);
     const scores = completed.map((attempt) => {
       const result = attempt.result;
@@ -217,17 +208,18 @@
       ? `${Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)}٪`
       : "—";
     document.querySelector("#conversation-count").textContent = String(conversations.length);
-    renderHistory("#exam-history", attempts, (attempt) => {
-      const result = attempt.result;
-      const score = result && Number.isFinite(result.score) && Number.isFinite(result.maxScore)
-        ? ` — ${result.score} من ${result.maxScore} (${result.percentage ?? Math.round((result.score / result.maxScore) * 100)}٪)`
-        : " — لم يكتمل";
-      return {
-        title: `${safeText(attempt.title)}${score}`,
-        meta: `${safeText(attempt.subject)} · ${formatDate(attempt.started_at)}`,
-      };
-    });
-    renderConversationHistory(conversations, user.id);
+    const averageScore = scores.length
+      ? scores.reduce((sum, score) => sum + score, 0) / scores.length
+      : null;
+    document.querySelector("#progress-level").textContent = averageScore === null
+      ? "ابدأ امتحانك الأول"
+      : averageScore >= 85 ? "ممتاز"
+        : averageScore >= 70 ? "جيد جدًا"
+          : averageScore >= 50 ? "يتقدم"
+            : "يحتاج إلى مراجعة";
+    renderExamHistory(attempts);
+    renderConversationHistory(conversations);
+    await loadStudentSubjects();
 
     const adminSection = document.querySelector("#admin-section");
     adminSection.hidden = true;
@@ -255,6 +247,9 @@
       if (!/مدير|administrator|Forbidden|403/i.test(error.message)) throw error;
     }
     clearMessage();
+    if (params.get("view") === "verify") {
+      showMessage("تم تفعيل بريدك الإلكتروني بنجاح. يمكنك الآن استخدام حسابك.", "success");
+    }
   }
 
   function renderHistory(selector, rows, toItem) {
@@ -267,7 +262,6 @@
       container.append(empty);
       return;
     }
-    localStorage.removeItem("khadmActiveStudentId");
     rows.forEach((row) => {
       const values = toItem(row);
       const item = document.createElement("article");
@@ -279,6 +273,63 @@
       item.append(title, meta);
       container.append(item);
     });
+  }
+
+  function renderExamHistory(attempts) {
+    const container = document.querySelector("#exam-history");
+    container.replaceChildren();
+    if (!attempts.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted-copy";
+      empty.textContent = "لا توجد امتحانات محفوظة بعد.";
+      container.append(empty);
+      return;
+    }
+    attempts.forEach((attempt) => {
+      const item = document.createElement("article");
+      item.className = "history-item";
+      const title = document.createElement("strong");
+      const result = attempt.result;
+      const score = result && Number.isFinite(result.score) && Number.isFinite(result.maxScore)
+        ? ` — ${result.score} من ${result.maxScore} (${result.percentage ?? Math.round((result.score / result.maxScore) * 100)}٪)`
+        : " — لم يكتمل";
+      title.textContent = `${safeText(attempt.title)}${score}`;
+      const meta = document.createElement("small");
+      meta.textContent = `${safeText(attempt.subject)} · ${formatDate(attempt.started_at)}`;
+      item.append(title, meta);
+      if (result) {
+        const feedback = document.createElement("p");
+        const strengths = (result.strengths || []).slice(0, 3).join("، ");
+        const weaknesses = (result.weaknesses || []).slice(0, 3).join("، ");
+        feedback.textContent = `نقاط القوة: ${strengths || "—"} · تحتاج مراجعة: ${weaknesses || "—"}`;
+        item.append(feedback);
+      }
+      container.append(item);
+    });
+  }
+
+  async function loadStudentSubjects() {
+    const container = document.querySelector("#student-subjects");
+    container.replaceChildren();
+    try {
+      const response = await fetch(`${WORKER_URL}/api/subjects`, { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error(`تعذر تحميل المواد (${response.status}).`);
+      const data = await response.json();
+      if (!Array.isArray(data.subjects)) throw new Error("استجابة المواد غير صالحة.");
+      data.subjects.forEach((subject) => {
+        if (!subject || typeof subject.id !== "string" || typeof subject.label !== "string") return;
+        const chip = document.createElement("div");
+        chip.className = "subject-chip";
+        chip.textContent = subject.label;
+        container.append(chip);
+      });
+    } catch (error) {
+      const message = document.createElement("p");
+      message.className = "muted-copy";
+      message.textContent = "تعذر تحميل قائمة المواد حاليًا. أعد المحاولة لاحقًا.";
+      container.append(message);
+      console.error("تعذر تحميل قائمة المواد:", error);
+    }
   }
 
   async function submitForm(form, operation, successMessage, buttonLabel) {
@@ -303,6 +354,7 @@
   document.querySelector("#register-form [name='date_of_birth']").max = todayAsInputDate();
   const registerForm = document.querySelector("#register-form");
   const profileForm = document.querySelector("#profile-form");
+  profileForm.elements.date_of_birth.max = todayAsInputDate();
   registerForm.elements.grade.addEventListener("change", () => updateDivisionField(registerForm, "#division-field", true));
   profileForm.elements.grade.addEventListener("change", () => updateDivisionField(profileForm, "#profile-division-field", false));
 
@@ -455,7 +507,6 @@
     try {
       await workerRequest("/api/account", { method: "DELETE" });
       await supabase.auth.signOut({ scope: "local" });
-      localStorage.removeItem("khadmActiveStudentId");
       showAuth("register");
       showMessage("تم حذف الحساب وبياناته.", "success");
     } catch (error) {
@@ -486,7 +537,8 @@
       const title = document.createElement("strong");
       title.textContent = `${safeText(student.full_name)} — ${safeText(student.email)}`;
       const meta = document.createElement("small");
-      meta.textContent = `${safeText(student.grade)} · ${student.active ? "نشط" : "معطل"}`;
+      const average = student.average_score === null ? "—" : `${student.average_score}٪`;
+      meta.textContent = `${safeText(student.grade)} · ${student.active ? "نشط" : "معطل"} · ${student.completed_exams || 0} امتحان · متوسط ${average}`;
       const toggle = document.createElement("button");
       toggle.className = "secondary";
       toggle.type = "button";

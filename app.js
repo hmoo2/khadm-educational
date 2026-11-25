@@ -797,7 +797,9 @@ const examResult = document.querySelector("#exam-result");
 const retryExamButton = document.querySelector("#retry-exam");
 
 const WORKER_URL = "https://frosty-hall-b193.hmoobaha8.workers.dev";
-const EXAM_STORAGE_KEY = "activeAiExam";
+const accountScope = window.accountUserId || "guest";
+const isAccountSession = accountScope !== "guest";
+const EXAM_STORAGE_KEY = isAccountSession ? null : "activeAiExam";
 const FALLBACK_SUBJECTS = [
   { id: "biology", label: "Biology — الأحياء" },
   { id: "chemistry", label: "Chemistry — الكيمياء" },
@@ -841,8 +843,15 @@ function createSessionId() {
 
 let aiMode = "biology";
 let availableSubjects = FALLBACK_SUBJECTS;
-let activeChatId = localStorage.getItem("activeChatId") || createSessionId();
-let chatSessions = JSON.parse(localStorage.getItem("aiChatSessions") || "[]");
+let chatSessions = isAccountSession
+  ? [...(window.accountChatSessions || [])]
+  : JSON.parse(localStorage.getItem("aiChatSessions") || "[]");
+const requestedChatId = new URLSearchParams(window.location.search).get("chat");
+let activeChatId = requestedChatId && chatSessions.some((session) => session.id === requestedChatId)
+  ? requestedChatId
+  : isAccountSession
+    ? chatSessions[0]?.id || createSessionId()
+    : localStorage.getItem("activeChatId") || createSessionId();
 let pendingImage = null;
 let examAttempt = null;
 let examTimerInterval = null;
@@ -858,9 +867,17 @@ function getActiveSession() {
 }
 
 function saveSessions() {
-  localStorage.setItem("aiChatSessions", JSON.stringify(chatSessions));
-  localStorage.setItem("activeChatId", activeChatId);
+  if (!isAccountSession) {
+    localStorage.setItem("aiChatSessions", JSON.stringify(chatSessions));
+    localStorage.setItem("activeChatId", activeChatId);
+  }
   renderChatList();
+  const activeSession = chatSessions.find((session) => session.id === activeChatId);
+  if (activeSession && isAccountSession && window.studentAccount?.persistConversation) {
+    window.studentAccount.persistConversation(activeSession).catch((error) => {
+      console.error("تعذر حفظ المحادثة في الحساب:", error);
+    });
+  }
 }
 
 function getSubjectLabel(mode) {
@@ -985,7 +1002,17 @@ function openChat(id) {
   chatMessages.replaceChildren();
   appendChatMessage(getChatWelcome(false), "assistant");
   for (const message of session.messages) {
-    appendChatMessage(message.content, message.role, { source: message.source });
+    const element = appendChatMessage(message.content, message.role, { source: message.source });
+    if (message.imagePath && window.studentAccount?.signedImageUrl) {
+      window.studentAccount.signedImageUrl(message.imagePath).then((imageUrl) => {
+        const image = document.createElement("img");
+        image.src = imageUrl;
+        image.alt = "الصورة المرفقة في المحادثة";
+        element.append(image);
+      }).catch((error) => {
+        console.error("تعذر عرض الصورة المحفوظة:", error);
+      });
+    }
   }
   saveSessions();
 }
@@ -1055,7 +1082,8 @@ async function sendChatMessage(rawMessage) {
   const session = getActiveSession();
   const targetSessionId = session.id;
   if (session.title === "محادثة جديدة") session.title = text.slice(0, 38);
-  session.messages.push({ role: "user", content: text });
+  const userMessageEntry = { role: "user", content: text };
+  session.messages.push(userMessageEntry);
   session.mode = aiMode;
   saveSessions();
 
@@ -1072,10 +1100,11 @@ async function sendChatMessage(rawMessage) {
       requestBody.image = { mimeType: pendingImage.mimeType, data: pendingImage.data };
     }
     if (aiMode === "biology") requestBody.topic = topicSelect.value;
+    const authHeaders = await window.studentAccount?.getAuthHeaders?.() || {};
 
     const response = await fetch(`${WORKER_URL}/api/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify(requestBody),
     });
     const responseBody = await response.text();
@@ -1115,6 +1144,20 @@ async function sendChatMessage(rawMessage) {
     }
   } finally {
     submitButton.disabled = false;
+    if (pendingImage && window.studentAccount?.storeImage) {
+      try {
+        const storedImage = await window.studentAccount.storeImage(
+          pendingImage.data,
+          pendingImage.mimeType,
+          pendingImage.name,
+        );
+        if (storedImage?.path) userMessageEntry.imagePath = storedImage.path;
+      } catch (error) {
+        if (activeChatId === targetSessionId) {
+          appendChatMessage(`تنبيه: لم تُحفظ الصورة في سجل الحساب: ${error.message}`, "error");
+        }
+      }
+    }
     clearChatImage();
     saveSessions();
   }
@@ -1165,16 +1208,18 @@ function isValidExam(exam) {
         typeof question.prompt !== "string" || !question.prompt.trim() || question.prompt.length > 1600 ||
         !Array.isArray(question.options) || question.options.length > 6 ||
         !Number.isInteger(question.points) || question.points < 1 || question.points > 10 ||
-        typeof question.correctAnswer !== "string" || !question.correctAnswer.trim() ||
-        typeof question.explanation !== "string" || !question.explanation.trim() ||
-        !Array.isArray(question.rubric) || question.rubric.length < 1 ||
-        question.rubric.length > 8 ||
-        !question.rubric.every((item) => typeof item === "string" && item.trim() && item.length <= 300)) {
+        (question.correctAnswer !== undefined &&
+          (typeof question.correctAnswer !== "string" || !question.correctAnswer.trim())) ||
+        (question.explanation !== undefined &&
+          (typeof question.explanation !== "string" || !question.explanation.trim())) ||
+        (question.rubric !== undefined &&
+          (!Array.isArray(question.rubric) || question.rubric.length < 1 || question.rubric.length > 8 ||
+            !question.rubric.every((item) => typeof item === "string" && item.trim() && item.length <= 300)))) {
       return false;
     }
     if (question.type === "mcq" || question.type === "true_false") {
       if (question.options.length < 2 || !question.options.every((option) => typeof option === "string") ||
-          !question.options.includes(question.correctAnswer)) return false;
+          (question.correctAnswer !== undefined && !question.options.includes(question.correctAnswer))) return false;
     } else if (question.options.length) {
       return false;
     }
@@ -1197,7 +1242,9 @@ function isValidExamResult(result, exam) {
       const question = exam.questions[index];
       return item && item.id === question.id && Number.isFinite(item.score) &&
         item.score >= 0 && item.score <= question.points && item.maxScore === question.points &&
-        typeof item.correctAnswer === "string" && typeof item.feedback === "string" &&
+        typeof item.correctAnswer === "string" &&
+        (typeof item.explanation === "string" || typeof question.explanation === "string") &&
+        typeof item.feedback === "string" &&
         Array.isArray(item.missingPoints) && item.missingPoints.every((point) => typeof point === "string");
     }) &&
     Array.isArray(result.strengths) && result.strengths.every((item) => typeof item === "string") &&
@@ -1214,11 +1261,17 @@ function persistExamAttempt() {
     ])],
     images: {},
   };
-  try {
-    localStorage.setItem(EXAM_STORAGE_KEY, JSON.stringify(savedAttempt));
-  } catch (error) {
-    setExamStatus("تعذر حفظ تقدم الامتحان على هذا الجهاز.", "error");
-    console.error("تعذر حفظ محاولة الامتحان:", error);
+  if (EXAM_STORAGE_KEY) {
+    try {
+      localStorage.setItem(EXAM_STORAGE_KEY, JSON.stringify(savedAttempt));
+    } catch (error) {
+      setExamStatus("تعذر حفظ تقدم الامتحان على هذا الجهاز.", "error");
+      console.error("تعذر حفظ محاولة الامتحان:", error);
+    }
+  } else if (window.studentAccount?.persistExam && examAttempt.status !== "completed") {
+    window.studentAccount.persistExam(examAttempt).catch((error) => {
+      setExamStatus(`تعذر حفظ إجابات الامتحان في حسابك: ${error.message}`, "error");
+    });
   }
 }
 
@@ -1260,7 +1313,7 @@ function renderExamResults() {
     const answer = document.createElement("p");
     answer.textContent = `الإجابة النموذجية: ${item.correctAnswer}`;
     const explanation = document.createElement("p");
-    explanation.textContent = `التصحيح أو التفسير: ${question.explanation}`;
+    explanation.textContent = `التصحيح أو التفسير: ${item.explanation || question.explanation}`;
     section.append(heading, prompt, feedback, answer, explanation);
     if (item.missingPoints.length) {
       const missing = document.createElement("p");
@@ -1397,11 +1450,13 @@ async function submitExam(isAutomatic = false) {
     return answer;
   });
   try {
+    const authHeaders = await window.studentAccount?.getAuthHeaders?.() || {};
     const response = await fetch(`${WORKER_URL}/api/exams/grade`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify({
         mode: examAttempt.mode,
+        attemptId: examAttempt.attemptId,
         exam: examAttempt.exam,
         answers,
       }),
@@ -1477,7 +1532,10 @@ async function generateNewExam(excludeQuestions = []) {
     }
     const response = await fetch(`${WORKER_URL}/api/exams/generate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(await window.studentAccount?.getAuthHeaders?.() || {}),
+      },
       body: JSON.stringify(requestSettings),
     });
     const data = await response.json().catch(() => null);
@@ -1493,6 +1551,7 @@ async function generateNewExam(excludeQuestions = []) {
     clearInterval(examTimerInterval);
     examAttempt = {
       mode: settings.mode,
+      attemptId: typeof data.attemptId === "string" ? data.attemptId : null,
       exam: generatedExam,
       answers: {},
       images: {},
@@ -1521,7 +1580,9 @@ async function generateNewExam(excludeQuestions = []) {
 }
 
 function restoreExamAttempt() {
-  const saved = localStorage.getItem(EXAM_STORAGE_KEY);
+  const saved = isAccountSession
+    ? window.accountActiveExam ? JSON.stringify(window.accountActiveExam) : null
+    : localStorage.getItem(EXAM_STORAGE_KEY);
   if (!saved) return;
   try {
     const stored = JSON.parse(saved);
@@ -1552,7 +1613,7 @@ function restoreExamAttempt() {
       startExamTimer();
     }
   } catch (error) {
-    localStorage.removeItem(EXAM_STORAGE_KEY);
+    if (EXAM_STORAGE_KEY) localStorage.removeItem(EXAM_STORAGE_KEY);
     setExamStatus("تعذر استعادة الامتحان المحفوظ؛ أنشئ امتحانًا جديدًا.", "error");
     console.error("تعذر استعادة محاولة الامتحان:", error);
   }
@@ -1702,3 +1763,7 @@ openChat(activeChatId);
 requestQuestion();
 restoreExamAttempt();
 void loadAvailableSubjects();
+if (isAccountSession && window.accountSyncError) {
+  connectionStatus.textContent = "تعذر تحميل سجل الحساب؛ قد لا تظهر بعض المحادثات أو الامتحانات.";
+  connectionStatus.className = "connection-status offline";
+}

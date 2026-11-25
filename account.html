@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="حساب الطالب ولوحة متابعة الدراسة في khadm-educational." />
+    <title>حساب الطالب — khadm-educational</title>
+    <link rel="icon" type="image/jpeg" href="assets/khadm-educational-logo.jpeg" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="account.css" />
+  </head>
+  <body class="account-page">
+    <main class="account-shell">
+      <header class="account-header">
+        <a class="account-brand" href="index.html">
+          <img class="brand-mark" src="assets/khadm-educational-logo.jpeg" alt="" />
+          <span><strong>khadm-educational</strong><small>حساب الطالب</small></span>
+        </a>
+        <a class="secondary account-home" href="index.html">العودة إلى المنصة</a>
+      </header>
+
+      <div id="account-alert" class="account-alert" role="status" aria-live="polite" hidden></div>
+      <div id="account-loading" class="account-loading" role="status">جارٍ التحقق من الحساب...</div>
+
+      <section id="auth-view" class="account-card" hidden>
+        <div class="account-tabs" aria-label="خيارات الحساب">
+          <a data-view-link="login" href="account.html?view=login">تسجيل الدخول</a>
+          <a data-view-link="register" href="account.html?view=register">إنشاء حساب</a>
+        </div>
+
+        <form id="login-form" class="account-form" hidden>
+          <h1>تسجيل الدخول</h1>
+          <p>أدخل بيانات حسابك لمتابعة دراستك ونتائجك.</p>
+          <label>البريد الإلكتروني<input name="email" type="email" autocomplete="email" required maxlength="254" /></label>
+          <label>كلمة المرور
+            <span class="password-field">
+              <input name="password" type="password" autocomplete="current-password" required />
+              <button type="button" class="password-toggle" data-password-toggle>إظهار</button>
+            </span>
+          </label>
+          <button class="primary" type="submit">دخول</button>
+          <a href="account.html?view=forgot">نسيت كلمة المرور؟</a>
+        </form>
+
+        <form id="register-form" class="account-form" hidden>
+          <h1>إنشاء حساب طالب</h1>
+          <p>أنشئ حسابًا لحفظ محادثاتك وامتحاناتك ودرجاتك بأمان.</p>
+          <label>الاسم الكامل<input name="full_name" type="text" autocomplete="name" required minlength="2" maxlength="120" /></label>
+          <label>البريد الإلكتروني<input name="email" type="email" autocomplete="email" required maxlength="254" /></label>
+          <label>كلمة المرور
+            <span class="password-field">
+              <input name="password" type="password" autocomplete="new-password" required minlength="8" />
+              <button type="button" class="password-toggle" data-password-toggle>إظهار</button>
+            </span>
+          </label>
+          <label>تأكيد كلمة المرور<input name="password_confirmation" type="password" autocomplete="new-password" required minlength="8" /></label>
+          <label>تاريخ الميلاد<input name="date_of_birth" type="date" required /></label>
+          <label>الجنس
+            <select name="gender" required>
+              <option value="">اختر</option>
+              <option value="male">ذكر</option>
+              <option value="female">أنثى</option>
+            </select>
+          </label>
+          <label>نوع التعليم
+            <select name="education_type" required>
+              <option value="">اختر</option>
+              <option value="general_secondary">الثانوية العامة</option>
+              <option value="azhar">الثانوية الأزهرية</option>
+            </select>
+          </label>
+          <label>الصف الدراسي
+            <select name="grade" required>
+              <option value="">اختر</option>
+              <option value="first_secondary">الأول الثانوي</option>
+              <option value="second_secondary">الثاني الثانوي</option>
+              <option value="third_secondary">الثالث الثانوي</option>
+            </select>
+          </label>
+          <label id="division-field" hidden>الشعبة الدراسية
+            <select name="division">
+              <option value="">اختر الشعبة</option>
+              <option value="science">علمي علوم</option>
+              <option value="mathematics">علمي رياضة</option>
+              <option value="literary">أدبي</option>
+            </select>
+          </label>
+          <button class="primary" type="submit">إنشاء الحساب وإرسال رسالة التحقق</button>
+          <a href="account.html?view=login">لديك حساب؟ سجل الدخول</a>
+        </form>
+
+        <form id="forgot-form" class="account-form" hidden>
+          <h1>استعادة كلمة المرور</h1>
+          <p>سنرسل رابطًا آمنًا لإعادة تعيين كلمة المرور إلى بريدك.</p>
+          <label>البريد الإلكتروني<input name="email" type="email" autocomplete="email" required maxlength="254" /></label>
+          <button class="primary" type="submit">إرسال رابط الاستعادة</button>
+          <a href="account.html?view=login">العودة إلى تسجيل الدخول</a>
+        </form>
+
+        <form id="reset-form" class="account-form" hidden>
+          <h1>تعيين كلمة مرور جديدة</h1>
+          <p>اختر كلمة مرور جديدة لحسابك.</p>
+          <label>كلمة المرور الجديدة<input name="password" type="password" autocomplete="new-password" required minlength="8" /></label>
+          <label>تأكيد كلمة المرور<input name="password_confirmation" type="password" autocomplete="new-password" required minlength="8" /></label>
+          <button class="primary" type="submit">حفظ كلمة المرور</button>
+        </form>
+
+        <section id="verify-view" class="account-form" hidden>
+          <h1>تحقق من بريدك الإلكتروني</h1>
+          <p id="verify-message">أرسلنا رابط التفعيل. افتح الرسالة لإكمال إنشاء الحساب.</p>
+          <form id="resend-form" class="account-form">
+            <label>البريد الإلكتروني<input name="email" type="email" autocomplete="email" required maxlength="254" /></label>
+            <button class="primary" type="submit">إعادة إرسال رسالة التحقق</button>
+          </form>
+          <a href="account.html?view=login">العودة إلى تسجيل الدخول</a>
+        </section>
+      </section>
+
+      <section id="profile-view" class="account-card" hidden>
+        <div class="dashboard-heading">
+          <div>
+            <p class="eyebrow">لوحة الطالب</p>
+            <h1 id="welcome-heading">مرحبًا</h1>
+          </div>
+          <button id="signout-button" class="secondary" type="button">تسجيل الخروج</button>
+        </div>
+        <div class="dashboard-grid">
+          <article class="dashboard-stat"><span>الامتحانات المكتملة</span><strong id="exam-count">0</strong></article>
+          <article class="dashboard-stat"><span>متوسط الدرجات</span><strong id="average-score">—</strong></article>
+          <article class="dashboard-stat"><span>المحادثات المحفوظة</span><strong id="conversation-count">0</strong></article>
+          <article class="dashboard-stat"><span>مستوى التقدم</span><strong id="progress-level">—</strong></article>
+        </div>
+        <section class="account-section">
+          <h2>المواد الدراسية</h2>
+          <div id="student-subjects" class="subjects-grid"></div>
+        </section>
+        <section class="account-section">
+          <h2>الملف الشخصي</h2>
+          <form id="profile-form" class="account-form profile-form">
+            <div class="avatar-row">
+              <img id="profile-avatar" alt="الصورة الشخصية" hidden />
+              <label>الصورة الشخصية<input id="avatar-input" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+            </div>
+            <label>الاسم الكامل<input name="full_name" required minlength="2" maxlength="120" /></label>
+            <label>البريد الإلكتروني<input name="email" type="email" disabled /></label>
+            <p id="email-status" class="muted-copy"></p>
+            <label>تاريخ الميلاد<input name="date_of_birth" type="date" required /></label>
+            <label>الجنس
+              <select name="gender" required>
+                <option value="male">ذكر</option>
+                <option value="female">أنثى</option>
+              </select>
+            </label>
+            <label>نوع التعليم
+              <select name="education_type" required>
+                <option value="general_secondary">الثانوية العامة</option>
+                <option value="azhar">الثانوية الأزهرية</option>
+              </select>
+            </label>
+            <label>الصف الدراسي
+              <select name="grade" required>
+                <option value="first_secondary">الأول الثانوي</option>
+                <option value="second_secondary">الثاني الثانوي</option>
+                <option value="third_secondary">الثالث الثانوي</option>
+              </select>
+            </label>
+            <label id="profile-division-field" hidden>الشعبة الدراسية
+              <select name="division">
+                <option value="">لا توجد شعبة</option>
+                <option value="science">علمي علوم</option>
+                <option value="mathematics">علمي رياضة</option>
+                <option value="literary">أدبي</option>
+              </select>
+            </label>
+            <button class="primary" type="submit">حفظ التعديلات</button>
+          </form>
+        </section>
+        <section class="account-section">
+          <h2>آخر الامتحانات</h2>
+          <div id="exam-history" class="history-list"></div>
+        </section>
+        <section class="account-section">
+          <h2>محادثاتي المحفوظة</h2>
+          <div id="conversation-history" class="history-list"></div>
+        </section>
+        <section id="admin-section" class="account-section" hidden>
+          <h2>إدارة المنصة</h2>
+          <div class="admin-tools">
+            <label>البحث عن طالب<input id="admin-search" type="search" placeholder="الاسم أو البريد الإلكتروني" /></label>
+            <button id="admin-search-button" class="secondary" type="button">بحث</button>
+          </div>
+          <div id="admin-stats" class="dashboard-grid"></div>
+          <div id="admin-students" class="history-list"></div>
+        </section>
+        <section class="account-section account-danger-zone">
+          <h2>حذف الحساب</h2>
+          <p>سيؤدي ذلك إلى حذف بيانات الحساب وسجلاته بشكل نهائي.</p>
+          <button id="delete-account-button" class="danger-button" type="button">حذف حسابي نهائيًا</button>
+        </section>
+      </section>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="account.js"></script>
+  </body>
+</html>

@@ -1,19 +1,21 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="account-session-check">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="منصة تعليمية ذكية لطلاب الثانوية العامة والثانوية الأزهرية." />
     <title>khadm-educational</title>
+    <link rel="icon" type="image/jpeg" href="assets/khadm-educational-logo.jpeg" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar" aria-label="سجل المحادثات">
         <div class="brand">
-          <div class="brand-mark">ع</div>
+          <img class="brand-mark" src="assets/khadm-educational-logo.jpeg" alt="شعار khadm-educational" />
           <div><strong>khadm-educational</strong><span>الثانوية العامة والأزهرية</span></div>
         </div>
+        <a class="account-entry" href="account.html?view=login">حساب الطالب</a>
         <button id="new-chat" class="new-chat" type="button">+ محادثة جديدة</button>
         <nav id="chat-list" class="chat-list" aria-label="المحادثات السابقة"></nav>
         <button id="theme-toggle" class="theme-toggle" type="button" aria-label="تبديل الوضع الليلي">الوضع الليلي</button>
@@ -23,6 +25,7 @@
         <header class="chat-header">
           <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="فتح قائمة المحادثات" aria-expanded="false">☰</button>
           <div class="page-heading">
+            <img class="mobile-brand-logo" src="assets/khadm-educational-logo.jpeg" alt="" />
             <p class="eyebrow">منصة أحياء تعليمية</p>
             <h1>مساعد ذكي للمنهج المصري</h1>
           </div>
@@ -236,6 +239,16 @@
       </main>
     </div>
     <button id="sidebar-backdrop" class="sidebar-backdrop" type="button" aria-label="إغلاق قائمة المحادثات" hidden></button>
-    <script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="account-sync.js"></script>
+    <script>
+      window.accountSessionReady.then((authenticated) => {
+        if (!authenticated) return;
+        const app = document.createElement("script");
+        app.src = "app.js";
+        document.body.append(app);
+      });
+    </script>
   </body>
 </html>

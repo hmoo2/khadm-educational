@@ -1,0 +1,54 @@
+.account-page { min-height: 100vh; padding: 24px 14px; }
+.account-shell { width: min(780px, 100%); margin: 0 auto; }
+.account-header, .account-brand, .dashboard-heading, .avatar-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.account-header { margin-bottom: 20px; }
+.account-brand { justify-content: flex-start; color: var(--text); text-decoration: none; }
+.account-brand strong, .account-brand small { display: block; }
+.account-brand small { margin-top: 4px; color: var(--muted); }
+.account-brand .brand-mark { flex: 0 0 42px; }
+.account-card { padding: clamp(18px, 4vw, 30px); border: 1px solid var(--line); border-radius: 18px; background: var(--panel); box-shadow: 0 12px 36px rgba(20, 45, 60, .06); }
+.account-tabs { display: flex; gap: 8px; padding-bottom: 18px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+.account-tabs a, .account-form > a { color: var(--teal); font-weight: 700; text-decoration: none; }
+.account-tabs a { padding: 10px 14px; border-radius: 10px; }
+.account-tabs a.active { background: var(--teal-soft); }
+.account-form { display: grid; gap: 14px; }
+.account-form h1, .account-section h2 { margin: 0; }
+.account-form p, .account-section p { margin: 0; color: var(--muted); line-height: 1.7; }
+.account-form label, .admin-tools label { display: grid; gap: 7px; color: var(--text); font-weight: 700; }
+.account-form input, .account-form select, .admin-tools input { width: 100%; min-height: 44px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; }
+.password-field { display: flex; gap: 7px; }
+.password-toggle { border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+.account-form .primary { min-height: 46px; }
+.account-alert { padding: 13px 15px; margin-bottom: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); line-height: 1.6; }
+.account-loading { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--muted); text-align: center; }
+.account-alert[data-type="error"] { border-color: #df8d8d; color: #9c2525; }
+.account-alert[data-type="success"] { border-color: #78b9a2; color: #17684d; }
+.account-alert[data-type="info"] { border-color: var(--teal); color: var(--text); }
+.muted-copy { color: var(--muted); }
+.dashboard-heading { margin-bottom: 22px; }
+.dashboard-heading h1 { margin: 4px 0; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
+.dashboard-stat { display: grid; gap: 9px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--muted); }
+.dashboard-stat strong { color: var(--text); font-size: 1.4rem; }
+.account-section { display: grid; gap: 14px; padding-top: 20px; margin-top: 20px; border-top: 1px solid var(--line); }
+.subjects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 9px; }
+.subject-chip { padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); }
+.profile-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.profile-form .primary, .profile-form .avatar-row, .profile-form .muted-copy { grid-column: 1 / -1; }
+.avatar-row { justify-content: flex-start; flex-wrap: wrap; }
+.avatar-row img { width: 76px; height: 76px; border-radius: 50%; object-fit: cover; }
+.history-list { display: grid; gap: 9px; }
+.history-item { padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.history-item strong, .history-item small { display: block; }
+.history-item small { margin-top: 6px; color: var(--muted); }
+.admin-tools { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 10px; }
+.danger-button { width: fit-content; padding: 10px 14px; border: 1px solid #c95656; border-radius: 10px; background: transparent; color: #a12e2e; font: inherit; font-weight: 700; }
+.account-danger-zone { border-top-color: #e4b7b7; }
+@media (max-width: 560px) {
+  .account-page { padding: 14px 10px; }
+  .account-home { padding: 8px 10px; }
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .profile-form { grid-template-columns: 1fr; }
+  .profile-form .primary, .profile-form .avatar-row, .profile-form .muted-copy { grid-column: auto; }
+  .dashboard-heading { align-items: flex-start; flex-direction: column; }
+}
