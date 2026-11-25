@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="منصة تعليمية ذكية لطلاب الثانوية العامة والثانوية الأزهرية." />
+    <title>khadm-educational</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="سجل المحادثات">
+        <div class="brand">
+          <div class="brand-mark">ع</div>
+          <div><strong>khadm-educational</strong><span>الثانوية العامة والأزهرية</span></div>
+        </div>
+        <button id="new-chat" class="new-chat" type="button">+ محادثة جديدة</button>
+        <nav id="chat-list" class="chat-list" aria-label="المحادثات السابقة"></nav>
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="تبديل الوضع الليلي">الوضع الليلي</button>
+      </aside>
+
+      <main class="main-panel">
+        <header class="chat-header">
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="فتح قائمة المحادثات" aria-expanded="false">☰</button>
+          <div class="page-heading">
+            <p class="eyebrow">منصة أحياء تعليمية</p>
+            <h1>مساعد ذكي للمنهج المصري</h1>
+          </div>
+          <label class="subject-picker" for="subject-select">
+            مادة المساعد
+            <select id="subject-select" aria-label="اختر مادة المساعد">
+              <option value="biology">Biology — الأحياء</option>
+              <option value="chemistry">Chemistry — الكيمياء</option>
+              <option value="physics">Physics — الفيزياء</option>
+              <option value="mathematics">Mathematics — الرياضيات</option>
+              <option value="arabic">Arabic — اللغة العربية</option>
+              <option value="english">English — اللغة الإنجليزية</option>
+              <option value="general">مساعد عام</option>
+            </select>
+          </label>
+        </header>
+
+        <section class="settings" aria-label="إعداد التدريب السريع في الأحياء">
+        <label>
+          الموضوع
+          <select id="topic">
+            <option value="كل المنهج">كل المنهج</option>
+            <option value="الدعامة والحركة">الدعامة والحركة</option>
+            <option value="التنسيق الهرموني">التنسيق الهرموني</option>
+            <option value="التكاثر">التكاثر</option>
+            <option value="المناعة">المناعة</option>
+            <option value="DNA والمعلومات الوراثية">DNA والمعلومات الوراثية</option>
+            <option value="RNA وتخليق البروتين">الأحماض النووية وتخليق البروتين</option>
+            <option value="الأحياء وعلوم الأرض">الأحياء وعلوم الأرض</option>
+          </select>
+        </label>
+        <label>
+          مستوى السؤال
+          <select id="difficulty">
+            <option value="سهل">سهل</option>
+            <option value="متوسط" selected>متوسط</option>
+            <option value="متقدم">متقدم</option>
+          </select>
+        </label>
+        <button id="new-question" class="primary" type="button">أنشئ سؤالا</button>
+        </section>
+
+        <p id="mode" class="mode" aria-live="polite">جار تجهيز السؤال...</p>
+
+      <section class="quiz-card" aria-labelledby="question-text">
+        <div class="question-meta">
+          <span id="question-topic"></span>
+          <span id="question-difficulty"></span>
+        </div>
+        <h2 id="question-text">اختر إعداداتك ثم اضغط أنشئ سؤالا.</h2>
+        <div id="options" class="options" role="group" aria-label="الاختيارات"></div>
+        <div id="feedback" class="feedback" aria-live="polite" hidden></div>
+        <button id="next-question" class="secondary" type="button" hidden>السؤال التالي</button>
+      </section>
+
+      <section class="score-card" aria-label="النتيجة الحالية">
+        <div>
+          <span>الإجابات الصحيحة</span>
+          <strong id="correct-count">0</strong>
+        </div>
+        <div>
+          <span>إجمالي الأسئلة</span>
+          <strong id="total-count">0</strong>
+        </div>
+      </section>
+
+      <section class="exam-card" aria-labelledby="exam-title">
+        <div class="exam-heading">
+          <div>
+            <h2 id="exam-title">إنشاء امتحان ذكي</h2>
+            <p>أنشئ امتحانًا جديدًا، أجب عنه، ثم أرسل إجاباتك للتصحيح بالذكاء الاصطناعي.</p>
+          </div>
+          <span id="exam-status" class="exam-status" aria-live="polite">جاهز لإنشاء امتحان</span>
+        </div>
+        <form id="exam-settings-form" class="exam-settings">
+          <label>
+            المادة الدراسية
+            <select id="exam-subject-select">
+              <option value="biology">Biology — الأحياء</option>
+              <option value="chemistry">Chemistry — الكيمياء</option>
+              <option value="physics">Physics — الفيزياء</option>
+              <option value="mathematics">Mathematics — الرياضيات</option>
+              <option value="arabic">Arabic — اللغة العربية</option>
+              <option value="english">English — اللغة الإنجليزية</option>
+            </select>
+          </label>
+          <label>
+            الصف الدراسي
+            <select id="exam-grade">
+              <option value="first_secondary">الأول الثانوي</option>
+              <option value="second_secondary">الثاني الثانوي</option>
+              <option value="third_secondary" selected>الثالث الثانوي</option>
+            </select>
+          </label>
+          <label>
+            نظام الامتحان
+            <select id="exam-system">
+              <option value="general_secondary">الثانوية العامة</option>
+              <option value="azhar">الثانوية الأزهرية</option>
+              <option value="training_comprehensive">تدريب شامل</option>
+            </select>
+          </label>
+          <label>
+            نطاق الامتحان
+            <select id="exam-scope">
+              <option value="full">المنهج كاملًا</option>
+              <option value="unit">وحدة محددة</option>
+              <option value="lesson">درس محدد</option>
+            </select>
+          </label>
+          <label id="exam-scope-topic-wrap" hidden>
+            اسم الوحدة أو الدرس
+            <input id="exam-scope-topic" type="text" maxlength="120" placeholder="اكتب اسم الوحدة أو الدرس" />
+          </label>
+          <div class="exam-source-image">
+            <label for="exam-source-image">صورة سؤال أو رسم مرجعي (اختياري)</label>
+            <input id="exam-source-image" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" />
+            <div id="exam-source-preview" class="image-preview" hidden>
+              <img id="exam-source-preview-img" alt="معاينة الصورة المرجعية" />
+              <button id="remove-exam-source-image" class="secondary" type="button">حذف الصورة</button>
+            </div>
+          </div>
+          <label>
+            عدد الأسئلة
+            <input id="exam-question-count" type="number" min="1" max="20" value="10" required />
+          </label>
+          <label>
+            مستوى الصعوبة
+            <select id="exam-difficulty">
+              <option value="easy">سهل</option>
+              <option value="medium" selected>متوسط</option>
+              <option value="hard">صعب</option>
+            </select>
+          </label>
+          <label>
+            مدة الامتحان (دقيقة)
+            <input id="exam-duration" type="number" min="5" max="180" value="45" required />
+          </label>
+          <fieldset class="exam-question-types">
+            <legend>أنواع الأسئلة</legend>
+            <label><input type="checkbox" name="exam-question-type" value="mcq" checked /> اختيار من متعدد</label>
+            <label><input type="checkbox" name="exam-question-type" value="true_false" checked /> صح أو خطأ مع التصحيح</label>
+            <label><input type="checkbox" name="exam-question-type" value="complete" checked /> أكمل</label>
+            <label><input type="checkbox" name="exam-question-type" value="explain" checked /> علل</label>
+            <label><input type="checkbox" name="exam-question-type" value="define" checked /> المصطلحات</label>
+            <label><input type="checkbox" name="exam-question-type" value="compare" checked /> قارن</label>
+            <label><input type="checkbox" name="exam-question-type" value="importance" checked /> الوظيفة أو الأهمية</label>
+            <label><input type="checkbox" name="exam-question-type" value="essay" checked /> مقالي</label>
+            <label><input type="checkbox" name="exam-question-type" value="application" checked /> مسائل وتطبيقات</label>
+          </fieldset>
+          <button id="generate-exam" class="primary" type="submit">إنشاء امتحان جديد</button>
+        </form>
+
+        <div id="exam-workspace" class="exam-workspace" hidden>
+          <div class="exam-toolbar">
+            <div>
+              <h3 id="exam-workspace-title"></h3>
+              <p id="exam-progress" aria-live="polite"></p>
+            </div>
+            <div id="exam-timer" class="exam-timer" role="timer" aria-live="off">--:--</div>
+          </div>
+          <div id="exam-question-view" class="exam-question-view"></div>
+          <div id="exam-answer-attachment" class="exam-answer-attachment" hidden>
+            <label class="upload-button" title="إرفاق صورة للإجابة">
+              <input id="exam-answer-image" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" />
+              <span>📎</span>
+            </label>
+            <img id="exam-image-preview" alt="معاينة صورة الإجابة" hidden />
+            <button id="remove-exam-image" class="secondary" type="button" hidden>حذف الصورة</button>
+            <span id="exam-image-name"></span>
+          </div>
+          <div class="exam-actions">
+            <button id="exam-previous" class="secondary" type="button">السابق</button>
+            <button id="exam-next" class="secondary" type="button">التالي</button>
+            <button id="submit-exam" class="primary" type="button">تسليم الامتحان</button>
+          </div>
+          <div id="exam-result" class="exam-result" aria-live="polite" hidden></div>
+          <button id="retry-exam" class="primary" type="button" hidden>إعادة الامتحان بأسئلة جديدة</button>
+        </div>
+      </section>
+
+        <section class="ai-card" aria-labelledby="ai-title">
+          <div class="ai-heading">
+            <h2 id="ai-title">المحادثة الذكية</h2>
+            <span id="connection-status" class="connection-status">جارٍ الاتصال</span>
+          </div>
+          <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
+          <div id="chat-shortcuts" class="chat-shortcuts" aria-label="اقتراحات للمحادثة">
+            <button type="button" data-prompt="لخص درس التنسيق الهرموني">لخص درسًا</button>
+            <button type="button" data-prompt="تلميح">أعطني تلميحًا</button>
+            <button type="button" data-prompt="أنشئ لي خمس أسئلة اختيار من متعدد عن DNA مع الإجابات والتفسير">أنشئ اختبارًا</button>
+          </div>
+          <form id="chat-form" class="chat-form">
+            <label class="upload-button" title="إرفاق صورة سؤال">
+              <input id="chat-image" type="file" accept="image/png,image/jpeg,image/webp" />
+              <span>📎</span>
+            </label>
+            <label class="upload-button camera-button" title="التقاط صورة للسؤال">
+              <input id="chat-camera-image" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" />
+              <span>📷</span>
+            </label>
+            <textarea id="chat-input" rows="1" placeholder="اكتب سؤالك هنا..."></textarea>
+            <button class="send-button" type="submit" aria-label="إرسال">➤</button>
+          </form>
+          <div id="chat-image-preview" class="image-preview" hidden>
+            <img id="chat-image-preview-img" alt="معاينة الصورة المرفقة" />
+            <button id="remove-chat-image" class="secondary" type="button">حذف الصورة</button>
+          </div>
+          <p id="image-name" class="image-name"></p>
+        </section>
+      </main>
+    </div>
+    <button id="sidebar-backdrop" class="sidebar-backdrop" type="button" aria-label="إغلاق قائمة المحادثات" hidden></button>
+    <script src="app.js"></script>
+  </body>
+</html>
